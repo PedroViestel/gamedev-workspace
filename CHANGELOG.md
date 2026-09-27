@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- With an optional `TYPESAFE_API_KEY`, Jev chooses the agent and reasoning effort for worker chats opened by Mr. Mak. An agent or effort named in the request wins; otherwise effort follows the kind of work (routine, execution or research). Without the key, or if TypeSafe is slow or unavailable, the existing keyword rules apply.
+
 ## 0.1.2 - 2026-09-23
 
 - Fixed mouse-wheel scrolling in fullscreen Claude Code chats after opening a tab or returning to it. Scrolling also survives reconnects.

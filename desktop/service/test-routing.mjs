@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Coordinator } from './coordinator.mjs';
-import { taskEffort } from './effort.mjs';
+import { routeWorker } from './routing.mjs';
 import { taskTitle } from './titles.mjs';
 
 if (!process.argv.includes('--use-subscription')) throw new Error('Pass --use-subscription to check routing with the signed-in Codex account.');
@@ -27,7 +27,8 @@ const coordinator = await new Coordinator({
       case 'workspace_activity': return { date: args.date, cards: [card], commits: ['Check animation export'], basis: 'Workspace dates and recorded Git changes.' };
       case 'update_workspace': assert.equal(args.entityId, card.id); Object.assign(card, args); return card;
       case 'open_chat': {
-        const chat = { id: `test-chat-${chats.length}`, name: taskTitle(args.name), agent: args.agent, effort: taskEffort(coordinator.operations.get(id).text, args.effort), open: true, status: 'starting' };
+        const route = await routeWorker({ request: coordinator.operations.get(id).text, agent: args.agent, effort: args.effort });
+        const chat = { id: `test-chat-${chats.length}`, name: taskTitle(args.name), agent: route.agent, effort: route.effort, routing: route.routing, open: true, status: 'starting' };
         chats.push(chat); return chat;
       }
       case 'read_chat': return { ...chats.find(chat => chat.id === args.id), screen: 'Sign in required. This isolated test terminal is not authenticated.' };

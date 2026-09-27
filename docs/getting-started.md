@@ -71,7 +71,10 @@ coordinator. Its model follows your account configuration; an optional
 
 Voice requests can focus a chat, inspect a report, update a card or hand a larger
 task to a worker. Direct actions stay quick; a visible worker handles deliverables.
-Task-specific voice requests can use medium, high or xhigh effort. A direct
+Task-specific voice requests can use medium, high or xhigh effort. With an
+optional `TYPESAFE_API_KEY`, Jev reads each request before a worker opens: an
+agent or effort you name wins, otherwise the effort follows the kind of work.
+Only the request text is sent to TypeSafe. Without the key, keyword rules apply. A direct
 request to open a new chat uses the same `xhigh` default as the **+** button.
 Max requires an explicit request. The app reports tool results before calling
 an action complete.

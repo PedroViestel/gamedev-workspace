@@ -13,6 +13,7 @@ import { Attachments, attachmentText, MAX_IMAGE_BYTES } from './attachments.mjs'
 import { ContextLibrary } from './context.mjs';
 import { taskTitle } from './titles.mjs';
 import { taskEffort } from './effort.mjs';
+import { routeWorker } from './routing.mjs';
 import { Workspace, localDay } from './workspace.mjs';
 import { QuickActions } from './quick-actions.mjs';
 import { defaultVoiceStyle, voiceSession } from './voice-profile.mjs';
@@ -31,6 +32,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const mcp = new McpInventory(repo, mcpOptions);
   const sessions = await new Sessions(repo, stateDir).init();
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
+  const typesafeKey = process.env.TYPESAFE_API_KEY || environment.TYPESAFE_API_KEY;
   const settingsPath = path.join(stateDir, 'settings.json');
   let settings = { defaultAgent: 'codex', defaultBypass: false, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, terminalFontSize: 13, terminalAppearance: 'focus', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, ...await readJson(settingsPath, {}) };
   let selectedId = sessions.active().some(item => item.id === settings.selectedId) ? settings.selectedId : sessions.active()[0]?.id || null;
@@ -76,7 +78,13 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'reopen_chat': { const session = await sessions.resume(args.id); focus(session.id); return session; }
         case 'close_chat': return closeChat(args.id);
         case 'pin_chat': return sessions.pin(args.id, args.pinned);
-        case 'open_chat': { const session = await sessions.create({ ...args, name: taskTitle(args.name), effort: taskEffort(latestRequest, args.effort), bypass: args.bypass ?? settings.defaultBypass }); focus(session.id); return session; }
+        case 'open_chat': {
+          const name = taskTitle(args.name);
+          // A direct quick action already names its agent; other requests are routed by Jev.
+          const route = quick.operations.get(operationId)?.route === 'direct' ? { agent: args.agent, effort: taskEffort(latestRequest, args.effort) } : await routeWorker({ request: latestRequest, agent: args.agent, effort: args.effort, apiKey: typesafeKey });
+          const session = await sessions.create({ ...args, agent: route.agent, name, effort: route.effort, bypass: args.bypass ?? settings.defaultBypass });
+          focus(session.id); return route.routing ? { ...session, routing: route.routing } : session;
+        }
         case 'read_chat': return sessions.read(args.id);
         case 'send_to_chat': return sessions.input(args.id, args.text, { coordinator: true, submit: true });
         case 'attach_files': return attach(args.id, args.paths, true);
